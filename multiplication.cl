@@ -1,4 +1,4 @@
-__kernel void tribulle(__global __write_only int* output,__global __read_only int* input,const unsigned int size)
+__kernel void multiplication(__global __write_only int* output,__global __read_only int* input,const unsigned int size)
 {
 	unsigned int index=get_global_id(0);
 

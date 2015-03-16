@@ -1,5 +1,5 @@
 TEMPLATE = app
-TARGET = tribulle
+TARGET = multiplication
 QT *= opengl xml
 DEPENDPATH += .
 INCLUDEPATH += /usr/local/qt-labs-opencl/src/opencl
