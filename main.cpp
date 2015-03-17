@@ -28,10 +28,15 @@ int main(int argc, char *argv[])
     }
     srand(time(NULL));
 
-    int A[TAILLE][TAILLE];
-    int B[TAILLE][TAILLE];
-    int C[TAILLE][TAILLE];
+    int **A = new int*[TAILLE];
+    int **B = new int*[TAILLE];
+    int **C = new int*[TAILLE];
+
     for (int i = 0; i < TAILLE; ++i) {
+        A[i] = new int[TAILLE];
+        B[i] = new int[TAILLE];
+        C[i] = new int[TAILLE];
+
         for (int j = 0; j < TAILLE; ++j) {
             A[i][j] = B[i][j]= 1 ;
         }
@@ -64,9 +69,9 @@ int main(int argc, char *argv[])
         kernel.setArg(2,inbuffer_B);
         kernel.setArg(3,TAILLE);
 
-        int indata_A[TAILLE*TAILLE];
-        int indata_B[TAILLE*TAILLE];
-        int outdata[TAILLE*TAILLE];
+        int* indata_A = new int[TAILLE*TAILLE];
+        int* indata_B = new int[TAILLE*TAILLE];
+        int* outdata = new int[TAILLE*TAILLE];
 
         // Mise à plat
         int pas= 0;
@@ -83,9 +88,9 @@ int main(int argc, char *argv[])
         inbuffer_B.write(indata_B,TAILLE*TAILLE);
         kernel.run();
         outbuffer.read(outdata,TAILLE*TAILLE);
-        for (int i = 0; i < TAILLE*TAILLE; ++i) {
-            cout<<outdata[i]<<" ";
-        }
+
+        delete[] indata_A;
+        delete[] indata_B;
     }
 
 
@@ -112,5 +117,14 @@ int main(int argc, char *argv[])
 //        }
 //        cout<<endl;
 //    }
+
+    for (int i = 0; i < TAILLE; ++i) {
+        delete[] A[i];
+        delete[] B[i];
+        delete[] C[i];
+    }
+    delete[] A;
+    delete[] B;
+    delete[] C;
 }
 
