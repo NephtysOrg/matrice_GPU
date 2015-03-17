@@ -3,7 +3,6 @@
 #include "qclkernel.h"
 #include "qclcommandqueue.h"
 #include "qcldevice.h"
-
 #include "iostream"
 #define GPU 0
 #define CPU 1
@@ -12,6 +11,8 @@ using namespace std;
 int main(int argc, char *argv[])
 {    
     // Declarations
+    int work_size = CL_DEVICE_MAX_PARAMETER_SIZE/2;
+    cout <<"Worksize : "<< work_size<<endl;
     QCLContext context;
     QCLProgram program;
     QCLKernel kernel;
@@ -43,6 +44,7 @@ int main(int argc, char *argv[])
     }
     if(mode == CPU){
         cout<<"CPU mode"<<endl;
+        clock_t tStart = clock();
         for (int i = 0; i < TAILLE; i++){
             for (int j=0; j < TAILLE; j++){
                 C[i][j]=0;
@@ -51,6 +53,7 @@ int main(int argc, char *argv[])
                 }
             }
         }
+        cout<<"CPU time :"<<(clock() - tStart)/(double)(CLOCKS_PER_SEC/1000)<<" ms"<<endl;
     }else{
         if(!context.create()){
             qFatal("Could not create OpenCL context for the GPU\n");
@@ -63,7 +66,7 @@ int main(int argc, char *argv[])
 
         program=context.buildProgramFromSourceFile("multiplication.cl");
         kernel=program.createKernel("multiplication");
-        kernel.setGlobalWorkSize(TAILLE,TAILLE);
+        kernel.setGlobalWorkSize(work_size,work_size);
         kernel.setArg(0,outbuffer);
         kernel.setArg(1,inbuffer_A);
         kernel.setArg(2,inbuffer_B);
@@ -86,37 +89,47 @@ int main(int argc, char *argv[])
         cout<<"GPU mode"<<endl;
         inbuffer_A.write(indata_A,TAILLE*TAILLE);
         inbuffer_B.write(indata_B,TAILLE*TAILLE);
+        clock_t tStart = clock();
         kernel.run();
+        cout<<"GPU time :"<<(clock() - tStart)/(double)(CLOCKS_PER_SEC/1000)<<" ms"<<endl;
         outbuffer.read(outdata,TAILLE*TAILLE);
+
+        for (int i = 0,pas = 0; i < TAILLE; ++i) {
+            for (int j = 0; j < TAILLE; ++j,pas++) {
+                C[i][j] = outdata[pas];
+            }
+        }
 
         delete[] indata_A;
         delete[] indata_B;
+        delete[] outdata;
     }
 
+    if(TAILLE <= 5){
+        cout<<"Matrice A"<<endl;
+        for (int i=0; i<TAILLE; i++){
+            for (int j = 0; j < TAILLE; j++){
+                cout<<A[i][j]<<" ";
+            }
+            cout<<endl;
+        }
 
-//    cout<<"Matrice A"<<endl;
-//    for (int i=0; i<TAILLE; i++){
-//        for (int j = 0; j < TAILLE; j++){
-//            cout<<A[i][j]<<" ";
-//        }
-//        cout<<endl;
-//    }
+        cout<<"Matrice B"<<endl;
+        for (int i=0; i<TAILLE; i++){
+            for (int j = 0; j < TAILLE; j++){
+                cout<<B[i][j]<<" ";
+            }
+            cout<<endl;
+        }
 
-//    cout<<"Matrice B"<<endl;
-//    for (int i=0; i<TAILLE; i++){
-//        for (int j = 0; j < TAILLE; j++){
-//            cout<<B[i][j]<<" ";
-//        }
-//        cout<<endl;
-//    }
-
-//    cout<<"Matrice C"<<endl;
-//    for (int i=0; i<TAILLE; i++){
-//        for (int j = 0; j < TAILLE; j++){
-//            cout<<C[i][j]<<" ";
-//        }
-//        cout<<endl;
-//    }
+        cout<<"Matrice C"<<endl;
+        for (int i=0; i<TAILLE; i++){
+            for (int j = 0; j < TAILLE; j++){
+                cout<<C[i][j]<<" ";
+            }
+            cout<<endl;
+        }
+    }
 
     for (int i = 0; i < TAILLE; ++i) {
         delete[] A[i];
