@@ -28,16 +28,26 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
+<<<<<<< HEAD
     QCLVector<int>  inbuffer_A=context.createVector<int>(TAILLE*TAILLE,QCLMemoryObject::ReadOnly);
     QCLVector<int>  inbuffer_B=context.createVector<int>(TAILLE*TAILLE,QCLMemoryObject::ReadOnly);
     QCLVector<int>  outbuffer=context.createVector<int>(TAILLE*TAILLE,QCLMemoryObject::WriteOnly);
+=======
+    QCLVector<int>  inbuffer=context.createVector<int>(nbKernels,QCLMemoryObject::ReadOnly);
+    QCLVector<int>  outbuffer=context.createVector<int>(nbKernels,QCLMemoryObject::WriteOnly);
+>>>>>>> f09a5c10e83dc8ee17b996dfcd2d0cdf37251fc1
     program=context.buildProgramFromSourceFile("multiplication.cl");
     kernel=program.createKernel("multiplication");
     kernel.setGlobalWorkSize(nbKernels);
     kernel.setArg(0,outbuffer);
+<<<<<<< HEAD
     kernel.setArg(1,inbuffer_A);
     kernel.setArg(2,inbuffer_B);
     kernel.setArg(3,nbKernels);
+=======
+    kernel.setArg(1,inbuffer);
+    kernel.setArg(2,nbKernels);
+>>>>>>> f09a5c10e83dc8ee17b996dfcd2d0cdf37251fc1
 
     srand(time(NULL));
 
@@ -61,6 +71,7 @@ int main(int argc, char *argv[])
             }
         }
     }else{
+<<<<<<< HEAD
         int indata_A[TAILLE*TAILLE];
         int indata_B[TAILLE*TAILLE];
         int outdata[TAILLE*TAILLE];
@@ -109,6 +120,41 @@ int main(int argc, char *argv[])
 //        }
 //        cout<<endl;
 //    }
+=======
+
+
+        cout<<"GPU mode"<<endl;
+//        inbuffer.write(indata,nbKernels);
+//        kernel.run();
+//        outbuffer.read(outdata,nbKernels);
+
+    }
+
+
+    cout<<"Matrice A"<<endl;
+    for (int i=0; i<TAILLE; i++){
+        for (int j = 0; j < TAILLE; j++){
+            cout<<A[i][j]<<" ";
+        }
+        cout<<endl;
+    }
+
+    cout<<"Matrice B"<<endl;
+    for (int i=0; i<TAILLE; i++){
+        for (int j = 0; j < TAILLE; j++){
+            cout<<B[i][j]<<" ";
+        }
+        cout<<endl;
+    }
+
+    cout<<"Matrice C"<<endl;
+    for (int i=0; i<TAILLE; i++){
+        for (int j = 0; j < TAILLE; j++){
+            cout<<C[i][j]<<" ";
+        }
+        cout<<endl;
+    }
+>>>>>>> f09a5c10e83dc8ee17b996dfcd2d0cdf37251fc1
 
 }
 
