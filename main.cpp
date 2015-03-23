@@ -7,37 +7,30 @@
 #define GPU 0
 #define CPU 1
 using namespace std;
-
 int main(int argc, char *argv[])
-{    
+{
     // Declarations
     int work_size = CL_DEVICE_MAX_PARAMETER_SIZE/2;
     cout <<"Worksize : "<< work_size<<endl;
     QCLContext context;
     QCLProgram program;
     QCLKernel kernel;
-
-
     int TAILLE=10;
-    int mode =  CPU;
+    int mode = CPU;
     if(argv[2] != NULL)
         TAILLE=(atoi(argv[2])>0)?atoi(argv[2]):10;
-
     if(argv[1] != NULL){
         mode = (strcmp(argv[1],"-cpu") == 0)?CPU:mode;
         mode = (strcmp(argv[1],"-gpu") == 0)?GPU:mode;
     }
     srand(time(NULL));
-
     int **A = new int*[TAILLE];
     int **B = new int*[TAILLE];
     int **C = new int*[TAILLE];
-
     for (int i = 0; i < TAILLE; ++i) {
         A[i] = new int[TAILLE];
         B[i] = new int[TAILLE];
         C[i] = new int[TAILLE];
-
         for (int j = 0; j < TAILLE; ++j) {
             A[i][j] = B[i][j]= 1 ;
         }
@@ -59,23 +52,19 @@ int main(int argc, char *argv[])
             qFatal("Could not create OpenCL context for the GPU\n");
             exit(0);
         }
-
-        QCLVector<int>  inbuffer_A=context.createVector<int>(TAILLE*TAILLE,QCLMemoryObject::ReadOnly);
-        QCLVector<int>  inbuffer_B=context.createVector<int>(TAILLE*TAILLE,QCLMemoryObject::ReadOnly);
-        QCLVector<int>  outbuffer=context.createVector<int>(TAILLE*TAILLE,QCLMemoryObject::WriteOnly);
-
+        QCLVector<int> inbuffer_A=context.createVector<int>(TAILLE*TAILLE,QCLMemoryObject::ReadOnly);
+        QCLVector<int> inbuffer_B=context.createVector<int>(TAILLE*TAILLE,QCLMemoryObject::ReadOnly);
+        QCLVector<int> outbuffer=context.createVector<int>(TAILLE*TAILLE,QCLMemoryObject::WriteOnly);
         program=context.buildProgramFromSourceFile("multiplication.cl");
         kernel=program.createKernel("multiplication");
-        kernel.setGlobalWorkSize(work_size,work_size);
+        kernel.setGlobalWorkSize(TAILLE,TAILLE);
         kernel.setArg(0,outbuffer);
         kernel.setArg(1,inbuffer_A);
         kernel.setArg(2,inbuffer_B);
         kernel.setArg(3,TAILLE);
-
         int* indata_A = new int[TAILLE*TAILLE];
         int* indata_B = new int[TAILLE*TAILLE];
         int* outdata = new int[TAILLE*TAILLE];
-
         // Mise à plat
         int pas= 0;
         for (int i = 0; i < TAILLE; ++i) {
@@ -85,26 +74,22 @@ int main(int argc, char *argv[])
                 pas ++;
             }
         }
-
         cout<<"GPU mode"<<endl;
         inbuffer_A.write(indata_A,TAILLE*TAILLE);
         inbuffer_B.write(indata_B,TAILLE*TAILLE);
         clock_t tStart = clock();
         kernel.run();
-        cout<<"GPU time :"<<(clock() - tStart)/(double)(CLOCKS_PER_SEC/1000)<<" ms"<<endl;
         outbuffer.read(outdata,TAILLE*TAILLE);
-
+        cout<<"GPU time :"<<(clock() - tStart)/(double)(CLOCKS_PER_SEC/1000)<<" ms"<<endl;
         for (int i = 0,pas = 0; i < TAILLE; ++i) {
             for (int j = 0; j < TAILLE; ++j,pas++) {
                 C[i][j] = outdata[pas];
             }
         }
-
         delete[] indata_A;
         delete[] indata_B;
         delete[] outdata;
     }
-
     if(TAILLE <= 5){
         cout<<"Matrice A"<<endl;
         for (int i=0; i<TAILLE; i++){
@@ -113,7 +98,6 @@ int main(int argc, char *argv[])
             }
             cout<<endl;
         }
-
         cout<<"Matrice B"<<endl;
         for (int i=0; i<TAILLE; i++){
             for (int j = 0; j < TAILLE; j++){
@@ -121,7 +105,6 @@ int main(int argc, char *argv[])
             }
             cout<<endl;
         }
-
         cout<<"Matrice C"<<endl;
         for (int i=0; i<TAILLE; i++){
             for (int j = 0; j < TAILLE; j++){
@@ -130,7 +113,6 @@ int main(int argc, char *argv[])
             cout<<endl;
         }
     }
-
     for (int i = 0; i < TAILLE; ++i) {
         delete[] A[i];
         delete[] B[i];
@@ -140,4 +122,3 @@ int main(int argc, char *argv[])
     delete[] B;
     delete[] C;
 }
-
