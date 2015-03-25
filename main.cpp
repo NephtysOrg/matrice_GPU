@@ -8,6 +8,7 @@
 using namespace std;
 #define GPU 0
 #define CPU 1
+
 const int leafsize = 1024;
 QCLVector<int> inbuffer_A;
 QCLVector<int> inbuffer_B;
@@ -15,54 +16,75 @@ QCLVector<int> outbuffer;
 QCLKernel kernel;
 QCLContext context;
 QCLProgram program;
+int mode = CPU;
 
-
-void strassen(vector< vector<int> > &A,
-              vector< vector<int> > &B,
-              vector< vector<int> > &C, unsigned int tam);
+void multiply(vector< vector<int> > A, vector< vector<int> > B, vector< vector<int> > &C, int n);
+vector<int> matrixPlane(vector< vector<int> > A,bool col);
+void CPUMult(vector< vector<int> > A, vector< vector<int> > B, vector< vector<int> > &C, int n);
+void GPUMult(vector< vector<int> > A, vector< vector<int> > B, vector< vector<int> > &C, int n);
+void strassen(vector< vector<int> > &A, vector< vector<int> > &B, vector< vector<int> > &C, unsigned int tam);
 unsigned int nextPowerOfTwo(int n);
-void strassenR(vector< vector<int> > &A,
-               vector< vector<int> > &B,
-               vector< vector<int> > &C,
-               int tam);
-void sum(vector< vector<int> > &A,
-         vector< vector<int> > &B,
-         vector< vector<int> > &C, int tam);
-void subtract(vector< vector<int> > &A,
-              vector< vector<int> > &B,
-              vector< vector<int> > &C, int tam);
-
+void strassenR(vector< vector<int> > &A, vector< vector<int> > &B, vector< vector<int> > &C, int tam);
+void sum(vector< vector<int> > &A, vector< vector<int> > &B, vector< vector<int> > &C, int tam);
+void subtract(vector< vector<int> > &A, vector< vector<int> > &B, vector< vector<int> > &C, int tam);
 void printMatrix(vector< vector<int> > matrix);
 void printArray(vector<int> matrix);
 
 
 
 
-vector<int> matrixPlane(vector< vector<int> > A){
-    cout<<"->matrixPlane()"<<endl;
+vector<int> matrixPlane(vector< vector<int> > A,bool col){
     vector<int> result;
     for (int i = 0; i < A.size(); ++i) {
         for (int j = 0; j < A[i].size(); ++j) {
-            result.push_back(A[i][j]);
+            if(col){
+                result.push_back(A[j][i]);
+            }else{
+                result.push_back(A[i][j]);
+            }
+
         }
     }
-    cout<<"<-matrixPlane()"<<endl;
     return result;
 }
 
-void ikjalgorithm(vector< vector<int> > A,
-                  vector< vector<int> > B,
-                  vector< vector<int> > &C, int n) {
-    cout<<"->ikjalgorithm()"<<endl;
 
-    vector<int> A_plane = matrixPlane(A);
-    vector<int> B_plane = matrixPlane(B);
+void multiply(vector< vector<int> > A,
+              vector< vector<int> > B,
+              vector< vector<int> > &C, int n){
+    if(mode == CPU){
+        CPUMult(A,B,C,n);
+    }else{
+        GPUMult(A,B,C,n);
+    }
+}
+
+
+void CPUMult(vector< vector<int> > A,
+             vector< vector<int> > B,
+             vector< vector<int> > &C, int n) {
+    for (int i = 0; i < n; i++) {
+        for (int k = 0; k < n; k++) {
+            for (int j = 0; j < n; j++) {
+                C[i][j] += A[i][k] * B[k][j];
+            }
+        }
+    }
+}
+
+void GPUMult(vector< vector<int> > A,
+             vector< vector<int> > B,
+             vector< vector<int> > &C, int n) {
+
+    vector<int> A_plane = matrixPlane(A,false);
+    vector<int> B_plane = matrixPlane(B,true);
     vector<int> outdata(A_plane.size());
 
 
     inbuffer_A=context.createVector<int>(n*n,QCLMemoryObject::ReadOnly);
     inbuffer_B=context.createVector<int>(n*n,QCLMemoryObject::ReadOnly);
     outbuffer=context.createVector<int>(n*n,QCLMemoryObject::WriteOnly);
+
     program=context.buildProgramFromSourceFile("multiplication.cl");
     kernel=program.createKernel("multiplication");
     kernel.setGlobalWorkSize(n,n);
@@ -75,6 +97,7 @@ void ikjalgorithm(vector< vector<int> > A,
     inbuffer_B.write(&B_plane[0],B_plane.size());
 
     kernel.run();
+    context.sync();
 
     outbuffer.read(&outdata[0],A_plane.size());
 
@@ -85,17 +108,18 @@ void ikjalgorithm(vector< vector<int> > A,
         }
     }
 
-
-    cout<<"->ikjalgorithm()"<<endl;
+    inbuffer_A.release();
+    inbuffer_B.release();
+    outbuffer.release();
 }
 
 
 
 void strassenR(vector< vector<int> > &A,
-              vector< vector<int> > &B,
-              vector< vector<int> > &C, int tam) {
+               vector< vector<int> > &B,
+               vector< vector<int> > &C, int tam) {
     if (tam <= leafsize) {
-        ikjalgorithm(A, B, C, tam);
+        multiply(A, B, C, tam);
         return;
     }
 
@@ -104,12 +128,12 @@ void strassenR(vector< vector<int> > &A,
         int newTam = tam/2;
         vector<int> inner (newTam,0);
         vector< vector<int> >
-            a11(newTam,inner), a12(newTam,inner), a21(newTam,inner), a22(newTam,inner),
-            b11(newTam,inner), b12(newTam,inner), b21(newTam,inner), b22(newTam,inner),
-              c11(newTam,inner), c12(newTam,inner), c21(newTam,inner), c22(newTam,inner),
-            p1(newTam,inner), p2(newTam,inner), p3(newTam,inner), p4(newTam,inner),
-            p5(newTam,inner), p6(newTam,inner), p7(newTam,inner),
-            aResult(newTam,inner), bResult(newTam,inner);
+                a11(newTam,inner), a12(newTam,inner), a21(newTam,inner), a22(newTam,inner),
+                b11(newTam,inner), b12(newTam,inner), b21(newTam,inner), b22(newTam,inner),
+                c11(newTam,inner), c12(newTam,inner), c21(newTam,inner), c22(newTam,inner),
+                p1(newTam,inner), p2(newTam,inner), p3(newTam,inner), p4(newTam,inner),
+                p5(newTam,inner), p6(newTam,inner), p7(newTam,inner),
+                aResult(newTam,inner), bResult(newTam,inner);
 
         int i, j;
 
@@ -128,14 +152,6 @@ void strassenR(vector< vector<int> > &A,
             }
         }
 
-//        cout<<"-- A11 --"<<endl;
-//        printMatrix(a11);
-//        cout<<"-- A12 --"<<endl;
-//        printMatrix(a12);
-//        cout<<"-- A21 --"<<endl;
-//        printMatrix(a21);
-//        cout<<"-- A22 --"<<endl;
-//        printMatrix(a22);
 
         // Calculating p1 to p7:
 
@@ -254,12 +270,9 @@ void printMatrix(vector< vector<int> > matrix) {
 }
 
 using namespace std;
+
 int main(int argc, char *argv[])
 {
-    // Declarations
-    int work_size = 1024;
-    cout <<"Worksize : "<< work_size<<endl;
-
     int TAILLE=10;
     int mode = CPU;
     if(argv[2] != NULL)
@@ -269,53 +282,19 @@ int main(int argc, char *argv[])
         mode = (strcmp(argv[1],"-gpu") == 0)?GPU:mode;
     }
 
-    int **A = new int*[TAILLE];
-    int **B = new int*[TAILLE];
-    int **C = new int*[TAILLE];
+    vector<int> inner (TAILLE,0);
+    vector< vector<int> > A(TAILLE, inner), B(TAILLE, inner), C(TAILLE, inner);
     for (int i = 0; i < TAILLE; ++i) {
-        A[i] = new int[TAILLE];
-        B[i] = new int[TAILLE];
-        C[i] = new int[TAILLE];
         for (int j = 0; j < TAILLE; ++j) {
-            A[i][j] = B[i][j]= 1 ;
+            A[i][j] = B[i][j] = 1;
         }
     }
-    if(mode == CPU){
-        cout<<"CPU mode"<<endl;
-        clock_t tStart = clock();
-        for (int i = 0; i < TAILLE; i++){
-            for (int j=0; j < TAILLE; j++){
-                C[i][j]=0;
-                for (int k = 0; k < TAILLE; k++){
-                    C[i][j] += A[i][k]*B[k][j];
-                }
-            }
-        }
-        cout<<"CPU time :"<<(clock() - tStart)/(double)(CLOCKS_PER_SEC/1000)<<" ms"<<endl;
-    }else{
-        if(!context.create()){
-            qFatal("Could not create OpenCL context for the GPU\n");
-            exit(0);
-        }
-        int n = TAILLE;
-        vector<int> inner (n,0);
-        vector< vector<int> > A(n, inner), B(n, inner), C(n, inner);
-        for (int i = 0; i < TAILLE; ++i) {
-            for (int j = 0; j < TAILLE; ++j) {
-                A[i][j] = B[i][j] = 1;
-            }
-        }
-        if(TAILLE != nextPowerOfTwo(TAILLE)){
-            TAILLE = nextPowerOfTwo(TAILLE);
-        }
-        cout<<"TAILLE : "<<TAILLE<<endl;
 
-        cout<<"GPU mode"<<endl;
-
-
-        strassen(A, B, C, n);
-        //printMatrix(C);
-
+    clock_t tStart = clock();
+    strassen(A, B, C, TAILLE);
+    cout<<"time :"<<(clock() - tStart)/(double)(CLOCKS_PER_SEC/1000)<<" ms"<<endl;
+    if(TAILLE <= 5){
+        printMatrix(C);
     }
 }
 
