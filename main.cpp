@@ -8,7 +8,7 @@
 using namespace std;
 #define GPU 0
 #define CPU 1
-const int leafsize = 2;
+const int leafsize = 1024;
 QCLVector<int> inbuffer_A;
 QCLVector<int> inbuffer_B;
 QCLVector<int> outbuffer;
@@ -50,48 +50,46 @@ vector<int> matrixPlane(vector< vector<int> > A){
     return result;
 }
 
-//void ikjalgorithm(vector< vector<int> > A,
-//                  vector< vector<int> > B,
-//                  vector< vector<int> > &C, int n) {
-//    cout<<"->ikjalgorithm()"<<endl;
-
-//    vector<int> A_plane = matrixPlane(A);
-//    vector<int> B_plane = matrixPlane(B);
-
-//    cout<<"Taille a plat de A : "<<A_plane.size()<<endl;
-//    cout<<"Taille a plat de B : "<<B_plane.size()<<endl;
-
-//    vector<int> outdata(A_plane.size());
-
-//    inbuffer_A.write(&A_plane[0],A_plane.size());
-//    inbuffer_B.write(&B_plane[0],B_plane.size());
-
-//    kernel.run();
-
-//    outbuffer.read(&outdata[0],A_plane.size());
-
-//    for (int i = 0,pas = 0; i < n; ++i) {
-//        for (int j = 0; j < n; ++j,pas++) {
-//            C[i][j] += outdata[pas];
-//        }
-//    }
-
-
-//    cout<<"->ikjalgorithm()"<<endl;
-//}
-
-
 void ikjalgorithm(vector< vector<int> > A,
-                                   vector< vector<int> > B,
-                                   vector< vector<int> > &C, int n) {
-    for (int i = 0; i < n; i++) {
-        for (int k = 0; k < n; k++) {
-            for (int j = 0; j < n; j++) {
-                C[i][j] += A[i][k] * B[k][j];
-            }
+                  vector< vector<int> > B,
+                  vector< vector<int> > &C, int n) {
+    cout<<"->ikjalgorithm()"<<endl;
+
+    vector<int> A_plane = matrixPlane(A);
+    vector<int> B_plane = matrixPlane(B);
+    vector<int> outdata(A_plane.size());
+
+
+    inbuffer_A=context.createVector<int>(n*n,QCLMemoryObject::ReadOnly);
+    inbuffer_B=context.createVector<int>(n*n,QCLMemoryObject::ReadOnly);
+    outbuffer=context.createVector<int>(n*n,QCLMemoryObject::WriteOnly);
+    program=context.buildProgramFromSourceFile("multiplication.cl");
+    kernel=program.createKernel("multiplication");
+    kernel.setGlobalWorkSize(n,n);
+    kernel.setArg(0,outbuffer);
+    kernel.setArg(1,inbuffer_A);
+    kernel.setArg(2,inbuffer_B);
+    kernel.setArg(3,n);
+
+    inbuffer_A.write(&A_plane[0],A_plane.size());
+    inbuffer_B.write(&B_plane[0],B_plane.size());
+
+    kernel.run();
+
+    outbuffer.read(&outdata[0],A_plane.size());
+
+
+    for (int i = 0,pas = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j,pas++) {
+            C[i][j] += outdata[pas];
         }
     }
+
+
+    cout<<"->ikjalgorithm()"<<endl;
 }
+
+
 
 void strassenR(vector< vector<int> > &A,
               vector< vector<int> > &B,
@@ -130,14 +128,14 @@ void strassenR(vector< vector<int> > &A,
             }
         }
 
-        cout<<"-- A11 --"<<endl;
-        printMatrix(a11);
-        cout<<"-- A12 --"<<endl;
-        printMatrix(a12);
-        cout<<"-- A21 --"<<endl;
-        printMatrix(a21);
-        cout<<"-- A22 --"<<endl;
-        printMatrix(a22);
+//        cout<<"-- A11 --"<<endl;
+//        printMatrix(a11);
+//        cout<<"-- A12 --"<<endl;
+//        printMatrix(a12);
+//        cout<<"-- A21 --"<<endl;
+//        printMatrix(a21);
+//        cout<<"-- A22 --"<<endl;
+//        printMatrix(a22);
 
         // Calculating p1 to p7:
 
@@ -311,27 +309,14 @@ int main(int argc, char *argv[])
             TAILLE = nextPowerOfTwo(TAILLE);
         }
         cout<<"TAILLE : "<<TAILLE<<endl;
-        inbuffer_A=context.createVector<int>(TAILLE*TAILLE,QCLMemoryObject::ReadOnly);
-        inbuffer_B=context.createVector<int>(TAILLE*TAILLE,QCLMemoryObject::ReadOnly);
-        outbuffer=context.createVector<int>(TAILLE*TAILLE,QCLMemoryObject::WriteOnly);
-        program=context.buildProgramFromSourceFile("multiplication.cl");
-        kernel=program.createKernel("multiplication");
-        kernel.setGlobalWorkSize(TAILLE,TAILLE);
-        kernel.setArg(0,outbuffer);
-        kernel.setArg(1,inbuffer_A);
-        kernel.setArg(2,inbuffer_B);
-        kernel.setArg(3,TAILLE);
+
         cout<<"GPU mode"<<endl;
 
 
         strassen(A, B, C, n);
-        printMatrix(C);
+        //printMatrix(C);
 
     }
-    if(TAILLE <= 5){
-
-    }
-
 }
 
 
