@@ -8,7 +8,7 @@
 using namespace std;
 #define GPU 0
 #define CPU 1
-const int leafsize = 1024;
+const int leafsize = 2;
 QCLVector<int> inbuffer_A;
 QCLVector<int> inbuffer_B;
 QCLVector<int> outbuffer;
@@ -20,7 +20,7 @@ QCLProgram program;
 void strassen(vector< vector<int> > &A,
               vector< vector<int> > &B,
               vector< vector<int> > &C, unsigned int tam);
-int nextPowerOfTwo(int n);
+unsigned int nextPowerOfTwo(int n);
 void strassenR(vector< vector<int> > &A,
                vector< vector<int> > &B,
                vector< vector<int> > &C,
@@ -35,18 +35,7 @@ void subtract(vector< vector<int> > &A,
 void printMatrix(vector< vector<int> > matrix);
 void printArray(vector<int> matrix);
 
-//void ikjalgorithm(vector< vector<int> > A,
-//                  vector< vector<int> > B,
-//                  vector< vector<int> > &C, int n) {
 
-//    for (int i = 0; i < n; i++) {
-//        for (int k = 0; k < n; k++) {
-//            for (int j = 0; j < n; j++) {
-//                C[i][j] += A[i][k] * B[k][j];
-//            }
-//        }
-//    }
-//}
 
 
 vector<int> matrixPlane(vector< vector<int> > A){
@@ -61,69 +50,68 @@ vector<int> matrixPlane(vector< vector<int> > A){
     return result;
 }
 
-void gpuMultiplication(vector< vector<int> > A,
-                  vector< vector<int> > B,
-                  vector< vector<int> > &C, int n) {
-    cout<<"->ikjalgorithm()"<<endl;
-    //mise à plat
+//void ikjalgorithm(vector< vector<int> > A,
+//                  vector< vector<int> > B,
+//                  vector< vector<int> > &C, int n) {
+//    cout<<"->ikjalgorithm()"<<endl;
 
-    vector<int> A_plane = matrixPlane(A);
-    vector<int> B_plane = matrixPlane(B);
+//    vector<int> A_plane = matrixPlane(A);
+//    vector<int> B_plane = matrixPlane(B);
 
-    cout<<"Taille a plat de A : "<<A_plane.size()<<endl;
-    cout<<"Taille a plat de B : "<<B_plane.size()<<endl;
+//    cout<<"Taille a plat de A : "<<A_plane.size()<<endl;
+//    cout<<"Taille a plat de B : "<<B_plane.size()<<endl;
 
-    int* indata_A = new int[A_plane.size()];
-    int* indata_B = new int[B_plane.size()];
+//    vector<int> outdata(A_plane.size());
 
-    for (int i = 0; i < A_plane.size(); ++i) {
-            cout<<"i="<<i<<endl;
-            indata_A[i] = A_plane[i];
-            indata_B[i] = B_plane[i];
-    }
+//    inbuffer_A.write(&A_plane[0],A_plane.size());
+//    inbuffer_B.write(&B_plane[0],B_plane.size());
 
-    int* outdata = new int[A_plane.size()];
+//    kernel.run();
 
-    inbuffer_A.write(indata_A,A_plane.size());
-    inbuffer_B.write(indata_B,B_plane.size());
+//    outbuffer.read(&outdata[0],A_plane.size());
 
-    kernel.run();
-    context.sync();
+//    for (int i = 0,pas = 0; i < n; ++i) {
+//        for (int j = 0; j < n; ++j,pas++) {
+//            C[i][j] += outdata[pas];
+//        }
+//    }
 
-    outbuffer.read(outdata,A_plane.size());
 
-    for (int i = 0,pas = 0; i < n; ++i) {
-        for (int j = 0; j < n; ++j,pas++) {
-            C[i][j] = outdata[pas];
+//    cout<<"->ikjalgorithm()"<<endl;
+//}
+
+
+void ikjalgorithm(vector< vector<int> > A,
+                                   vector< vector<int> > B,
+                                   vector< vector<int> > &C, int n) {
+    for (int i = 0; i < n; i++) {
+        for (int k = 0; k < n; k++) {
+            for (int j = 0; j < n; j++) {
+                C[i][j] += A[i][k] * B[k][j];
+            }
         }
     }
-    delete[] indata_A;
-    delete[] indata_B;
-    delete[] outdata;
-    cout<<"->ikjalgorithm()"<<endl;
 }
 
 void strassenR(vector< vector<int> > &A,
-               vector< vector<int> > &B,
-               vector< vector<int> > &C, int tam) {
-    cout<<"->strassenR()"<<endl;
+              vector< vector<int> > &B,
+              vector< vector<int> > &C, int tam) {
     if (tam <= leafsize) {
-        gpuMultiplication(A, B, C, tam);
-        cout<<"<-strassenR()"<<endl;
+        ikjalgorithm(A, B, C, tam);
         return;
     }
 
     // other cases are treated here:
     else {
         int newTam = tam/2;
-        vector<int> inner (newTam);
+        vector<int> inner (newTam,0);
         vector< vector<int> >
-                a11(newTam,inner), a12(newTam,inner), a21(newTam,inner), a22(newTam,inner),
-                b11(newTam,inner), b12(newTam,inner), b21(newTam,inner), b22(newTam,inner),
-                c11(newTam,inner), c12(newTam,inner), c21(newTam,inner), c22(newTam,inner),
-                p1(newTam,inner), p2(newTam,inner), p3(newTam,inner), p4(newTam,inner),
-                p5(newTam,inner), p6(newTam,inner), p7(newTam,inner),
-                aResult(newTam,inner), bResult(newTam,inner);
+            a11(newTam,inner), a12(newTam,inner), a21(newTam,inner), a22(newTam,inner),
+            b11(newTam,inner), b12(newTam,inner), b21(newTam,inner), b22(newTam,inner),
+              c11(newTam,inner), c12(newTam,inner), c21(newTam,inner), c22(newTam,inner),
+            p1(newTam,inner), p2(newTam,inner), p3(newTam,inner), p4(newTam,inner),
+            p5(newTam,inner), p6(newTam,inner), p7(newTam,inner),
+            aResult(newTam,inner), bResult(newTam,inner);
 
         int i, j;
 
@@ -141,6 +129,15 @@ void strassenR(vector< vector<int> > &A,
                 b22[i][j] = B[i + newTam][j + newTam];
             }
         }
+
+        cout<<"-- A11 --"<<endl;
+        printMatrix(a11);
+        cout<<"-- A12 --"<<endl;
+        printMatrix(a12);
+        cout<<"-- A21 --"<<endl;
+        printMatrix(a21);
+        cout<<"-- A22 --"<<endl;
+        printMatrix(a22);
 
         // Calculating p1 to p7:
 
@@ -191,17 +188,16 @@ void strassenR(vector< vector<int> > &A,
             }
         }
     }
-    cout<<"<-strassenR()"<<endl;
 }
 
-int nextPowerOfTwo(int n) {
+unsigned int nextPowerOfTwo(int n) {
     return pow(2, int(ceil(log2(n))));
 }
 
 void strassen(vector< vector<int> > &A,
               vector< vector<int> > &B,
               vector< vector<int> > &C, unsigned int n) {
-    cout<<"->strassen()"<<endl;
+    //unsigned int n = tam;
     unsigned int m = nextPowerOfTwo(n);
     vector<int> inner(m,0);
     vector< vector<int> > APrep(m, inner), BPrep(m, inner), CPrep(m, inner);
@@ -214,13 +210,11 @@ void strassen(vector< vector<int> > &A,
     }
 
     strassenR(APrep, BPrep, CPrep, m);
-    cout<<"Sous strassR"<<endl;
     for(unsigned int i=0; i<n; i++) {
         for (unsigned int j=0; j<n; j++) {
             C[i][j] = CPrep[i][j];
         }
     }
-    cout<<"<-strassen()"<<endl;
 }
 
 void sum(vector< vector<int> > &A,
@@ -247,28 +241,19 @@ void subtract(vector< vector<int> > &A,
     }
 }
 
+
+
 void printMatrix(vector< vector<int> > matrix) {
     for (int i=0; i < matrix.size(); i++) {
         for (int j=0; j < matrix[i].size(); j++) {
             if (j != 0) {
-                cout << "\t";
+                cout << " ";
             }
             cout << matrix[i][j];
         }
         cout << endl;
     }
 }
-
-void printArray(vector<int> matrix) {
-    for (int i=0; i < matrix.size(); i++) {
-        cout << matrix[i]<< " ,";
-
-    }
-    cout << endl;
-}
-
-
-
 
 using namespace std;
 int main(int argc, char *argv[])
@@ -315,7 +300,7 @@ int main(int argc, char *argv[])
             exit(0);
         }
         int n = TAILLE;
-        vector<int> inner (n);
+        vector<int> inner (n,0);
         vector< vector<int> > A(n, inner), B(n, inner), C(n, inner);
         for (int i = 0; i < TAILLE; ++i) {
             for (int j = 0; j < TAILLE; ++j) {
@@ -325,6 +310,7 @@ int main(int argc, char *argv[])
         if(TAILLE != nextPowerOfTwo(TAILLE)){
             TAILLE = nextPowerOfTwo(TAILLE);
         }
+        cout<<"TAILLE : "<<TAILLE<<endl;
         inbuffer_A=context.createVector<int>(TAILLE*TAILLE,QCLMemoryObject::ReadOnly);
         inbuffer_B=context.createVector<int>(TAILLE*TAILLE,QCLMemoryObject::ReadOnly);
         outbuffer=context.createVector<int>(TAILLE*TAILLE,QCLMemoryObject::WriteOnly);
