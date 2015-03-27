@@ -1,7 +1,6 @@
 #include "qclcontext.h"
 #include "qclprogram.h"
 #include "qclkernel.h"
-#include "qclcommandqueue.h"
 #include "qcldevice.h"
 #include "iostream"
 #include <math.h>
