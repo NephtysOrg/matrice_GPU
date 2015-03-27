@@ -31,7 +31,6 @@ void strassenGPU(vector< vector<int> > &A, vector< vector<int> > &B, vector< vec
 void sum(vector< vector<int> > &A, vector< vector<int> > &B, vector< vector<int> > &C, int tam);
 void subtract(vector< vector<int> > &A, vector< vector<int> > &B, vector< vector<int> > &C, int tam);
 void printMatrix(vector< vector<int> > matrix);
-void printArray(vector<int> matrix);
 
 
 
@@ -363,6 +362,9 @@ int main(int argc, char *argv[])
     if(argv[1] != NULL){
         mode = (strcmp(argv[1],"-cpu") == 0)?CPU:mode;
         mode = (strcmp(argv[1],"-gpu") == 0)?GPU:mode;
+    }else{
+        cout<<"Usage : ./multiplication [-gpu|-cpu] n"<<endl;
+        return 0;
     }
 
     vector<int> inner (TAILLE,0);
@@ -377,13 +379,25 @@ int main(int argc, char *argv[])
         exit(0);
     }
 
+    if(mode == CPU){
+        cout<<"Mode : CPU";
+    }else{
+        cout<<"Mode : GPU";
+    }
+    cout<<endl;
+    cout<<"Taille : "<<TAILLE<<endl;
     clock_t tStart = clock();
     strassen(A, B, C, TAILLE);
     cout<<"time :"<<(clock() - tStart)/(double)(CLOCKS_PER_SEC)<<" ms"<<endl;
-    cout<<"C"<<C[0][0]<<endl;
-    if(TAILLE <= 5){
+
+    //if(TAILLE <= 5){
+        cout<<"A"<<endl;
+        printMatrix(A);
+        cout<<"B"<<endl;
+        printMatrix(B);
+        cout<<"C"<<endl;
         printMatrix(C);
-    }
+    //}
 }
 
 
